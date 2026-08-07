@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bhupendra Jha — RAN Design, Planning &amp; Optimization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #f6f3ec;
+    --paper-2: #efe9dc;
+    --ink: #1f2a2e;
+    --ink-soft: #56636a;
+    --signal-blue: #2a6f8f;
+    --signal-blue-deep: #1c4f68;
+    --amber: #d98e3f;
+    --line: #d7cfbd;
+    --white: #fffdf8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Space Grotesk', sans-serif; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  a{color:inherit;}
+
+  /* background: faint frequency grid */
+  .freq-grid{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(42,111,143,0.05) 0, rgba(42,111,143,0.05) 1px, transparent 1px, transparent 64px),
+      repeating-linear-gradient(90deg, rgba(42,111,143,0.05) 0, rgba(42,111,143,0.05) 1px, transparent 1px, transparent 64px);
+  }
+
+  .wrap{max-width:1040px; margin:0 auto; padding:0 32px;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    padding:96px 0 72px;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+  }
+  .hero-rings{
+    position:absolute;
+    top:-140px; right:-140px;
+    width:520px; height:520px;
+    pointer-events:none;
+  }
+  .hero-rings circle{
+    fill:none;
+    stroke-width:1.4;
+    animation:pulse 5s ease-in-out infinite;
+    transform-origin:center;
+  }
+  .hero-rings circle:nth-child(1){stroke:var(--signal-blue); opacity:.55; animation-delay:0s;}
+  .hero-rings circle:nth-child(2){stroke:var(--amber); opacity:.45; animation-delay:.6s;}
+  .hero-rings circle:nth-child(3){stroke:var(--signal-blue); opacity:.35; animation-delay:1.2s;}
+  .hero-rings circle:nth-child(4){stroke:var(--amber); opacity:.28; animation-delay:1.8s;}
+  .hero-rings circle:nth-child(5){stroke:var(--signal-blue-deep); opacity:.2; animation-delay:2.4s;}
+  @keyframes pulse{
+    0%{ transform:scale(0.96); opacity:0; }
+    12%{ opacity:.6; }
+    60%{ opacity:.25; }
+    100%{ transform:scale(1.06); opacity:0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hero-rings circle{ animation:none; opacity:.35; }
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--signal-blue-deep);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:9px; height:9px;
+    border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 0 4px rgba(217,142,63,0.18);
+  }
+  .hero h1{
+    font-size:clamp(40px, 6vw, 68px);
+    font-weight:700;
+    line-height:1.02;
+    max-width:11ch;
+  }
+  .hero .role{
+    margin-top:18px;
+    font-size:clamp(16px, 2vw, 19px);
+    color:var(--ink-soft);
+    max-width:52ch;
+  }
+  .hero .role b{color:var(--signal-blue-deep); font-weight:600;}
+
+  .contact-row{
+    margin-top:34px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 12px;
+  }
+  .contact-row a, .contact-row span{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:8px 14px;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:100px;
+    text-decoration:none;
+    color:var(--ink-soft);
+    transition:.2s;
+  }
+  .contact-row a:hover{ border-color:var(--signal-blue); color:var(--signal-blue-deep); }
+
+  /* ---------- SECTION SCAFFOLD ---------- */
+  section{ padding:64px 0; border-bottom:1px solid var(--line); }
+  section:last-of-type{ border-bottom:none; }
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:16px;
+    margin-bottom:36px;
+  }
+  .section-head .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--amber);
+    letter-spacing:.1em;
+  }
+  .section-head h2{ font-size:26px; font-weight:600; }
+  .section-head::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  /* ---------- SUMMARY ---------- */
+  .summary-text{
+    font-size:17px;
+    color:var(--ink-soft);
+    max-width:68ch;
+  }
+  .summary-text b{ color:var(--ink); font-weight:600; }
+
+  /* ---------- STAT STRIP ---------- */
+  .stat-strip{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+    margin-top:32px;
+    max-width:720px;
+  }
+  @media (max-width:640px){ .stat-strip{ grid-template-columns:repeat(2, 1fr); } }
+  .stat{
+    background:var(--white);
+    padding:20px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .stat-num{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:24px;
+    font-weight:700;
+    color:var(--signal-blue-deep);
+  }
+  .stat-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    line-height:1.35;
+  }
+
+  /* ---------- EXPERIENCE TIMELINE (transmission line) ---------- */
+  .timeline{
+    position:relative;
+    padding-left:34px;
+  }
+  .timeline::before{
+    content:"";
+    position:absolute;
+    left:5px; top:6px; bottom:6px;
+    width:2px;
+    background:repeating-linear-gradient(180deg, var(--signal-blue) 0 6px, transparent 6px 12px);
+  }
+  .tl-item{
+    position:relative;
+    padding-bottom:40px;
+  }
+  .tl-item:last-child{ padding-bottom:0; }
+  .tl-item::before{
+    content:"";
+    position:absolute;
+    left:-34px; top:4px;
+    width:12px; height:12px;
+    border-radius:50%;
+    background:var(--paper);
+    border:2px solid var(--signal-blue);
+  }
+  .tl-item .when{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--amber);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .tl-item h3{ font-size:19px; margin-top:4px; font-weight:600; }
+  .tl-item .org{ color:var(--signal-blue-deep); font-weight:500; font-size:14.5px; margin-top:2px;}
+  .tl-item p{ color:var(--ink-soft); margin-top:10px; font-size:15px; max-width:64ch; }
+
+  /* ---------- SKILLS: signal bars ---------- */
+  .skills-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px 40px;
+  }
+  @media (max-width:640px){ .skills-grid{ grid-template-columns:1fr; } }
+  .skill-row{ display:flex; align-items:center; gap:16px; }
+  .skill-row .bars{ display:flex; gap:3px; flex-shrink:0; }
+  .skill-row .bars span{
+    display:block;
+    width:6px;
+    background:var(--signal-blue);
+    border-radius:1px;
+  }
+  .skill-row .bars span:nth-child(1){height:8px;}
+  .skill-row .bars span:nth-child(2){height:13px;}
+  .skill-row .bars span:nth-child(3){height:18px;}
+  .skill-row .bars span:nth-child(4){height:23px;}
+  .skill-row .bars span:nth-child(5){height:28px; background:var(--amber);}
+  .skill-row .label{ font-size:15px; font-weight:500; }
+
+  .chip-cloud{ display:flex; flex-wrap:wrap; gap:9px; margin-top:28px; }
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:7px 13px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--white);
+    color:var(--ink-soft);
+  }
+
+  /* ---------- LANGUAGES ---------- */
+  .lang-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:18px; }
+  .lang-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+  }
+  .lang-card .name{ font-weight:600; font-size:15px; }
+  .lang-card .level{ font-size:12px; color:var(--ink-soft); margin-top:2px; font-family:'IBM Plex Mono', monospace;}
+  .dots{ display:flex; gap:5px; margin-top:10px; }
+  .dots span{ width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .dots span.filled{ background:var(--signal-blue); }
+
+  /* ---------- CERTS / EDUCATION / PUBLICATIONS ---------- */
+  .card-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px,1fr));
+    gap:18px;
+  }
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px 22px;
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:20px; right:20px;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--amber);
+  }
+  .card h3{ font-size:15.5px; font-weight:600; padding-right:20px; }
+  .card .meta{ font-size:12.5px; color:var(--signal-blue-deep); margin-top:8px; font-family:'IBM Plex Mono', monospace;}
+  .card .meta2{ font-size:13px; color:var(--ink-soft); margin-top:4px; }
+
+  footer{
+    padding:40px 0 60px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:12.5px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  [data-reveal]{
+    opacity:0;
+    transform:translateY(16px);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  [data-reveal].in{ opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="freq-grid"></div>
+
+<header class="hero">
+  <svg class="hero-rings" viewBox="0 0 520 520" aria-hidden="true">
+    <circle cx="260" cy="260" r="40"/>
+    <circle cx="260" cy="260" r="90"/>
+    <circle cx="260" cy="260" r="140"/>
+    <circle cx="260" cy="260" r="190"/>
+    <circle cx="260" cy="260" r="240"/>
+  </svg>
+  <div class="wrap">
+    <div class="eyebrow">On air · Kathmandu, Bagmati, Nepal</div>
+    <h1>Bhupendra&nbsp;Jha</h1>
+    <p class="role">Wi‑Fi, 5G, LTE, WCDMA &amp; GSM specialist — <b>18+ years</b> designing, planning and optimizing RAN networks across IoT and mobile infrastructure.</p>
+    <div class="contact-row">
+      <a href="tel:00977-1-4281155">00977‑1‑4281155</a>
+      <a href="mailto:bhupendra61@gmail.com">bhupendra61@gmail.com</a>
+      <a href="https://www.linkedin.com/in/bhupendrainfo" target="_blank" rel="noopener">linkedin.com/in/bhupendrainfo</a>
+      <a href="https://www.ntc.net.np" target="_blank" rel="noopener">ntc.net.np</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section data-reveal>
+    <div class="section-head"><span class="tag">01 · Signal</span><h2>Summary</h2></div>
+    <p class="summary-text" style="font-size:19px; color:var(--ink); font-weight:500; max-width:60ch;">
+      A network engineer who has kept Nepal's mobile signal on the air for <b>18+ years</b> — carrying GSM networks through WCDMA, LTE and into 5G and IoT, one optimized cell at a time.
+    </p>
+    <p class="summary-text" style="margin-top:16px;">
+      Deep, end‑to‑end command of the RF planning lifecycle: drive testing and neighbor‑cell tuning, BSC alarm and performance management, site survey and equipment layout, and transmission cut‑over — backed by fluency across the industry's core toolchain, <b>MapInfo, Atoll, Ekahau, TEMS, Actix and Capesso</b>. Equally at home training the next generation of RF engineers as delivering live network optimization for vendors including ZTE and Huawei, and now advancing that expertise with a Master's in Information System Engineering.
+    </p>
+    <div class="stat-strip">
+      <div class="stat"><span class="stat-num">18+</span><span class="stat-label">Years in RAN planning &amp; optimization</span></div>
+      <div class="stat"><span class="stat-num">2G→5G</span><span class="stat-label">Full generational range, incl. IoT</span></div>
+      <div class="stat"><span class="stat-num">6</span><span class="stat-label">Core RF planning tools</span></div>
+      <div class="stat"><span class="stat-num">MEng</span><span class="stat-label">Information System Engineering</span></div>
+    </div>
+  </section>
+
+  <section data-reveal>
+    <div class="section-head"><span class="tag">02 · Trace</span><h2>Experience</h2></div>
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="when">Sep 2016 — Present</div>
+        <h3>Senior NPO Engineer</h3>
+        <div class="org">NTC WSD, BabarMahal · Kathmandu, Nepal</div>
+        <p>Network planning &amp; optimization — drive test and optimization using TEMS and MapInfo, cell and neighbor parameter planning, BSC alarm and performance configuration, new BTS site recommendation, and transmission monitoring (microwave, DSL) during cut‑over.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="when">Aug 2009 — Present</div>
+        <h3>NOP Engineer</h3>
+        <div class="org">Nepal Telecom, MSD Sajha</div>
+        <p>GSM RF planning and optimization, BSS systems, MapInfo, MSS/HLR performance study, GSM site survey — coordinating with vendors including ZTE and Huawei.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="when">Sep 2008 — Present</div>
+        <h3>RF Engineer</h3>
+        <div class="org">Nepal Telecom, Hariharbhaban area</div>
+        <p>GSM and WCDMA planning and optimization for ZTE systems.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="when">2007 — 2008</div>
+        <h3>RF Engineer / Resource Person (TTC)</h3>
+        <div class="org">ZTE Corp., Panipokhari, Kathmandu</div>
+        <p>Drive test and optimization using ANT‑Pilot and MapInfo, neighbor cell parameter planning, BSC alarm and performance management, site survey and equipment layout in AutoCAD. Also delivered GSM (ZTE) training at the Telecom Training Centre, focused on RF optimization, network planning and BSS.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="when">Jul 2005 — Mar 2007</div>
+        <h3>Lecturer</h3>
+        <div class="org">Kantipur Engineering College, Dhapakhel, Lalitpur</div>
+        <p>Taught Communication, Electromagnetic Field, Electronic Circuits and Wireless Communication Systems; ran lab classes and examinations.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section data-reveal>
+    <div class="section-head"><span class="tag">03 · Spectrum</span><h2>Skills &amp; Tools</h2></div>
+    <p class="summary-text" style="margin-bottom:32px;">Core strengths sit in RF planning across every generation of mobile network, alongside the day‑to‑day toolchain used to plan, survey and optimize live sites.</p>
+    <div class="skills-grid">
+      <div class="skill-row">
+        <div class="bars"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="label">RF Planning — Wireless 2G/3G/4G/5G</div>
+      </div>
+      <div class="skill-row">
+        <div class="bars"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="label">WiFi</div>
+      </div>
+      <div class="skill-row">
+        <div class="bars"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="label">SMS A2P Monetization</div>
+      </div>
+    </div>
+    <div class="chip-cloud">
+      <span class="chip">5G</span><span class="chip">IoT</span><span class="chip">LTE</span><span class="chip">GSM</span>
+      <span class="chip">WCDMA</span><span class="chip">MapInfo</span><span class="chip">Atoll</span>
+      <span class="chip">Asset RF Planning</span><span class="chip">Ekahau</span><span class="chip">TEMS</span>
+      <span class="chip">Actix</span><span class="chip">Capesso</span><span class="chip">CRM</span>
+      <span class="chip">Office Management</span>
+    </div>
+  </section>
+
+  <section data-reveal>
+    <div class="section-head"><span class="tag">04 · Bands</span><h2>Languages</h2></div>
+    <div class="lang-grid">
+      <div class="lang-card">
+        <div class="name">Nepali</div>
+        <div class="level">Full professional</div>
+        <div class="dots"><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span></div>
+      </div>
+      <div class="lang-card">
+        <div class="name">English</div>
+        <div class="level">Full professional</div>
+        <div class="dots"><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span></div>
+      </div>
+      <div class="lang-card">
+        <div class="name">Hindi</div>
+        <div class="level">Full professional</div>
+        <div class="dots"><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span></div>
+      </div>
+      <div class="lang-card">
+        <div class="name">Maithili</div>
+        <div class="level">Full professional</div>
+        <div class="dots"><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span><span class="filled"></span></div>
+      </div>
+      <div class="lang-card">
+        <div class="name">Bangla</div>
+        <div class="level">Elementary</div>
+        <div class="dots"><span class="filled"></span><span class="filled"></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section data-reveal>
+    <div class="section-head"><span class="tag">05 · Log</span><h2>Certifications</h2></div>
+    <div class="card-grid">
+      <div class="card"><h3>Basic Antenna Training</h3></div>
+      <div class="card"><h3>5G Communication System &amp; Internet of Things</h3></div>
+      <div class="card"><h3>NT GSM 10M Project — WCDMA + LTE Planning and Optimization</h3></div>
+      <div class="card"><h3>GSM BSS RF GPRS Training</h3></div>
+      <div class="card"><h3>Training for Trainers</h3></div>
+    </div>
+  </section>
+
+  <section data-reveal>
+    <div class="section-head"><span class="tag">06 · Archive</span><h2>Education &amp; Publications</h2></div>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Master of Engineering — Information System Engineering</h3>
+        <div class="meta2">Purbanchal University, Nepal</div>
+        <div class="meta">Jun 2021 — Jan 2024</div>
+      </div>
+      <div class="card">
+        <h3>MBA — Management</h3>
+        <div class="meta2">IGNOU</div>
+        <div class="meta">2011 — 2014</div>
+      </div>
+      <div class="card">
+        <h3>BSc — Electrical &amp; Electronic Engineering</h3>
+        <div class="meta2">Chittagong University of Engineering &amp; Technology</div>
+        <div class="meta">2001 — 2006</div>
+      </div>
+      <div class="card">
+        <h3>Publication: Spare Part Management System for Nepal Telecom GSM System Performance</h3>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Bhupendra Jha · Kathmandu, Nepal</footer>
+
+<script>
+  const items = document.querySelectorAll('[data-reveal]');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  items.forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
