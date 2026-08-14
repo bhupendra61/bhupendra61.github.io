@@ -266,6 +266,37 @@
   .visitor-counter svg{width:15px;height:15px;stroke:var(--teal-deep); flex-shrink:0;}
   .visitor-counter strong{color:var(--teal-deep); font-weight:600;}
 
+  /* ---------- Contact Form ---------- */
+  .contact-form-box{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:48px 40px; max-width:620px; margin:0 auto;
+  }
+  .form-group{margin-bottom:24px;}
+  .form-group:last-child{margin-bottom:0;}
+  .form-label{
+    display:block; font-weight:600; font-size:0.95rem; color:var(--ink);
+    margin-bottom:8px;
+  }
+  .form-input, .form-textarea{
+    width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:6px;
+    font-family:'IBM Plex Sans', sans-serif; font-size:0.95rem; color:var(--ink);
+    background:#fff; transition:border-color .15s, box-shadow .15s;
+  }
+  .form-input:focus, .form-textarea:focus{
+    outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(13,122,121,0.1);
+  }
+  .form-textarea{
+    min-height:140px; resize:vertical;
+  }
+  .form-submit{
+    background:var(--teal-deep); color:#fff; padding:13px 24px; border-radius:5px;
+    border:none; font-weight:600; font-size:0.92rem; cursor:pointer;
+    box-shadow:0 6px 16px rgba(10,91,92,0.22); transition:transform .15s, box-shadow .15s;
+    width:100%;
+  }
+  .form-submit:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(10,91,92,0.3);}
+  .form-submit:active{transform:translateY(0);}
+
   [data-reveal]{opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease;}
   [data-reveal].in{opacity:1; transform:translateY(0);}
 
@@ -543,6 +574,44 @@
 </section>
 
 <section id="contact" data-reveal>
+  <div class="section-head">
+    <span class="kicker">Get in touch</span>
+    <h2 class="section-title">Send me a message</h2>
+  </div>
+  
+  <div class="contact-form-box">
+    <form action="https://formspree.io/f/xdendlaw" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="name">Full Name</label>
+        <input type="text" id="name" name="name" class="form-input" required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" name="email" class="form-input" required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="address">Address</label>
+        <input type="text" id="address" name="address" class="form-input" placeholder="City, Country" required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="phone">Phone Number</label>
+        <input type="tel" id="phone" name="phone" class="form-input" placeholder="+977..." required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="message">Message</label>
+        <textarea id="message" name="message" class="form-textarea" required></textarea>
+      </div>
+      
+      <button type="submit" class="form-submit">Send Message</button>
+    </form>
+  </div>
+</section>
+
+<section data-reveal>
   <div class="cta-band">
     <div>
       <h2>Let's build better Wireless Network, together.</h2>
