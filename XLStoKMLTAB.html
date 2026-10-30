@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RF CellMap — 2G / 3G / 4G Network Visualizer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:"Segoe UI",Arial,sans-serif}
+body{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:400px;min-width:400px;height:100vh;overflow-y:auto;background:#0f172a;color:#e2e8f0;padding:14px}
+#sidebar h1{margin:0;font-size:19px}
+#sidebar p.sub{margin:4px 0 12px;font-size:12px;color:#94a3b8;line-height:1.5}
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:10px}
+.card h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#7dd3fc}
+label{font-size:12px;display:block;margin:6px 0 2px;color:#cbd5e1}
+input[type=text],input[type=number],select,textarea{width:100%;background:#0f172a;border:1px solid #475569;color:#fff;border-radius:6px;padding:6px;font-size:13px}
+textarea{height:80px;resize:vertical;font-family:Consolas,monospace;font-size:11px}
+button{background:#2563eb;border:none;color:#fff;border-radius:6px;padding:7px 10px;font-size:13px;cursor:pointer;margin:4px 4px 0 0}
+button.secondary{background:#475569}button.green{background:#059669}button.orange{background:#d97706}button.teal{background:#0d9488}
+button:hover{filter:brightness(1.15)}button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px}.row>div{flex:1}
+#map{flex:1;background:#ddd}
+#err{display:none;background:#7f1d1d;color:#fecaca;padding:8px;border-radius:6px;font-size:12px;margin-bottom:10px;white-space:pre-wrap}
+#ok{display:none;background:#064e3b;color:#a7f3d0;padding:8px;border-radius:6px;font-size:12px;margin-bottom:10px}
+#stats{font-size:12px;color:#a7f3d0;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+th,td{border:1px solid #334155;padding:3px 5px;text-align:left}th{background:#334155}
+.hint{font-size:11px;color:#94a3b8;line-height:1.55}
+.legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:middle}
+input[type=range]{width:100%}input[type=file]{font-size:12px;color:#cbd5e1}
+code{background:#0f172a;padding:1px 4px;border-radius:4px}
+.drop{border:2px dashed #475569;border-radius:8px;padding:14px;text-align:center;font-size:13px;color:#94a3b8;cursor:pointer}
+.drop.over{border-color:#38bdf8;color:#fff;background:#1e3a5f}
+.del{color:#f87171;cursor:pointer}
+#mapWrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+#mapStatus{position:absolute;left:10px;bottom:24px;z-index:1000;background:rgba(15,23,42,.88);color:#e2e8f0;font-size:11px;padding:5px 9px;border-radius:6px;border:1px solid #334155;max-width:70%}
+#mapStatus b{color:#7dd3fc}
+#mapStatus button{background:#0d9488;padding:3px 8px;font-size:11px;margin:2px 0 0}
+</style>
+</head>
+<body>
+<div id="sidebar">
+<h1>RF CellMap — 2G / 3G / 4G</h1>
+<div id="headerLine">Prepared By Bhupendra Jha - RF Engineer</div>
+<p class="sub">HTML5 wireless network visualizer.<br>Sites from <b>Lat / Lon</b> on <b>OSM map</b>, cells as <b>azimuth sectors</b>.<br>Upload <b>Excel (.xlsx)</b> or <b>saved JSON</b> · Download <b>KML</b> + <b>MapInfo MIF/MID</b>.</p>
+<div id="err"></div><div id="ok"></div>
+
+<div class="card">
+<h3>1. Upload Excel / JSON (or paste)</h3>
+<div class="drop" id="drop">Drop <b>.xlsx / .xls / .csv / .json / .kml / .mif</b> here<br>or click to browse<input type="file" id="file" accept=".xlsx,.xls,.csv,.json,.kml,.mif,.mid,.txt" multiple style="display:none"></div>
+<div class="hint" style="margin-top:6px">Excel: first sheet, header row with <code>Site, Lat, Lon, Cell, Azimuth, Tech, Band</code>. JSON: previously saved project file from this tool. KML/MIF also accepted for re-import.</div>
+<div>
+<button id="btnTemplate" class="secondary">Excel template</button>
+<button id="btnSample" class="secondary">Load sample</button>
+<button id="btnClear" class="secondary">Clear</button>
+</div>
+<label>Paste CSV (optional)</label>
+<textarea id="csv" placeholder="Site,Lat,Lon,Cell,Azimuth,Tech,Band&#10;Kathmandu_Dasharath_01,27.7050,85.3120,Cell1,0,4G,B3"></textarea>
+<button id="btnLoadCsv">Plot pasted CSV</button>
+</div>
+
+<div class="card">
+<h3>2. Add / edit site manually</h3>
+<div class="row"><div><label>Site</label><input type="text" id="mSite" placeholder="Site_01"></div><div><label>Cell</label><input type="text" id="mCell" placeholder="Cell1"></div></div>
+<div class="row"><div><label>Lat</label><input type="number" id="mLat" step="any" placeholder="24.7136"></div><div><label>Lon</label><input type="number" id="mLon" step="any" placeholder="46.6753"></div></div>
+<div class="row"><div><label>Azimuth (0-359)</label><input type="number" id="mAz" min="0" max="359" value="0"></div><div><label>Tech</label><select id="mTech"><option>2G</option><option>3G</option><option>4G</option><option selected>5G</option></select></div></div>
+<label>Band</label><input type="text" id="mBand" placeholder="B3 / GSM900 / B1">
+<button id="btnAdd" class="teal">+ Add cell</button>
+</div>
+
+<div class="card">
+<h3>3. Display</h3>
+<div class="legend"><span style="background:#22c55e"></span>2G <span style="background:#3b82f6;margin-left:8px"></span>3G <span style="background:#ef4444;margin-left:8px"></span>4G <span style="background:#f97316;margin-left:8px"></span>5G <span style="background:#a855f7;margin-left:8px"></span>Other</div>
+<label><input type="checkbox" id="f2g" checked> 2G &nbsp;<input type="checkbox" id="f3g" checked> 3G &nbsp;<input type="checkbox" id="f4g" checked> 4G &nbsp;<input type="checkbox" id="f5g" checked> 5G &nbsp;&nbsp;<input type="checkbox" id="showLabels" checked> Labels &nbsp;<input type="checkbox" id="showDots" checked> Dots</label>
+<div><label>Sector length / radius (m): <b id="rVal">1500</b> — drag to resize live (map will NOT re-zoom)</label>
+<div class="row"><div style="flex:1"><input type="range" id="radius" min="100" max="20000" value="1500" step="100"></div><div style="flex:0 0 90px"><input type="number" id="radiusNum" min="100" max="20000" value="1500" step="100"></div></div>
+<div><button id="btnSmaller" class="secondary">− Smaller</button><button id="btnBigger" class="secondary">+ Bigger</button><button id="btnFit" class="teal">Fit view to data</button></div>
+<label><input type="checkbox" id="forceGlobal" checked> Force slider size for all cells (uncheck = use per-cell Radius column from Excel if present)</label></div>
+<div class="row"><div><label>Beamwidth (°): <b id="bVal">65</b></label><input type="range" id="beam" min="20" max="120" value="65" step="5"></div>
+<div><label><br><input type="checkbox" id="autoFit" checked> Auto-fit view when new data loads</label></div></div>
+<label>Base map (all OSM data — switch if you see Access Denied / blank tiles)</label>
+<select id="baseSel"><option value="osm" selected>OSM Standard</option><option value="hot">OSM Humanitarian (openstreetmap.fr)</option><option value="carto">Carto Light (OSM data, most reliable)</option><option value="cartod">Carto Dark (OSM data)</option><option value="topo">OpenTopoMap (OSM data)</option><option value="esri">Esri Satellite (for reference)</option></select>
+<div class="hint">If tiles say “Access denied / 403”: OSM Standard blocks file://, VPNs and heavy zooming. Pick Carto Light or HOT — same OSM roads, different server.</div>
+<div id="stats">No data loaded.</div>
+</div>
+
+<div class="card">
+<h3>4. Search site</h3>
+<div class="row"><div><input type="text" id="qSite" list="siteList" placeholder="Type site or cell name…"><datalist id="siteList"></datalist></div><div style="flex:0 0 64px"><button id="btnSite">Find</button></div></div>
+<label>Search place (OSM Nominatim, needs internet)</label>
+<div class="row"><div><input type="text" id="qPlace" placeholder="e.g. Jeddah Corniche"></div><div style="flex:0 0 56px"><button id="btnPlace" class="green">Go</button></div></div>
+<div id="placeRes" class="hint"></div>
+</div>
+
+<div class="card">
+<h3>5. Download (KML / MapInfo / JSON / Excel)</h3>
+<button id="btnKml" class="green">KML</button>
+<button id="btnMif" class="orange">MapInfo MIF+MID</button>
+<button id="btnMid" class="secondary">MID only (retry)</button>
+<button id="btnJson" class="teal">Save JSON</button>
+<button id="btnXlsx" class="secondary">Excel</button>
+<button id="btnCsvOut" class="secondary">CSV</button>
+<div class="hint">KML → double-click opens in Google Earth (or right-click ▸ Open with ▸ Google Earth). MapInfo → keep <code>cellmap.mif</code> + <code>cellmap.mid</code> with the SAME name in the SAME folder, then open the <code>.MIF</code> via File ▸ Open. If the browser blocks the 2nd file, allow multiple downloads or press “MID only”.</div>
+</div>
+
+<div class="card">
+<h3>Cells (<span id="cnt">0</span>)</h3>
+<div style="max-height:230px;overflow:auto"><table><thead><tr><th>Site</th><th>Cell</th><th>Tech</th><th>Az</th><th></th></tr></thead><tbody id="tbl"></tbody></table></div>
+</div>
+</div>
+<div id="mapWrap"><div id="map"></div><div id="mapStatus">Base: <b id="baseName">OSM Standard</b> · <span id="tileMsg">loading tiles…</span><br><button id="btnBase">Switch base map (if Access Denied)</button></div></div>
+
+<script>
+(function(){
+"use strict";
+function err(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;}
+function ok(m){var e=document.getElementById('ok');e.style.display='block';e.textContent=m;setTimeout(function(){e.style.display='none';},4000);}
+function clrErr(){document.getElementById('err').style.display='none';}
+if(typeof L==='undefined'){err('Leaflet failed to load (no internet?). Map needs https://unpkg.com access.');return;}
+
+var map=L.map('map',{zoomControl:true}).setView([28.3949,84.1240],7);
+map.attributionControl.setPrefix('Leaflet');
+/* OSM 403/Access-denied fix: several OSM-data servers + auto fallback.
+   tile.openstreetmap.org denies file://, some VPNs/corporate nets, and rapid zooming.
+   Carto/HOT use the same OSM data on more permissive CDNs. */
+var baseDefs={
+  osm:{name:'OSM Standard',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',opt:{maxZoom:19,minZoom:2,tileSize:256,detectRetina:false,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}},
+  hot:{name:'OSM Humanitarian',url:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',opt:{maxZoom:19,minZoom:2,subdomains:'abc',tileSize:256,detectRetina:false,attribution:'&copy; OSM, Tiles <a href="https://www.openstreetmap.fr/">OSM France</a>'}},
+  carto:{name:'Carto Light',url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',opt:{maxZoom:20,minZoom:2,subdomains:'abcd',attribution:'&copy; OSM &copy; <a href="https://carto.com/">CARTO</a>'}},
+  cartod:{name:'Carto Dark',url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',opt:{maxZoom:20,minZoom:2,subdomains:'abcd',attribution:'&copy; OSM &copy; CARTO'}},
+  topo:{name:'OpenTopoMap',url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',opt:{maxZoom:17,minZoom:2,subdomains:'abc',attribution:'&copy; OSM, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'}},
+  esri:{name:'Esri Satellite',url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',opt:{maxZoom:19,minZoom:2,attribution:'Imagery &copy; Esri'}}
+};
+var baseOrder=['osm','hot','carto','cartod','topo','esri'];
+var curBase=null,curKey='osm',tileErr=0,tileOk=0,autoSwitched=false;
+function setBase(key,reason){
+  if(curBase)map.removeLayer(curBase);
+  curKey=key;tileErr=0;tileOk=0;
+  var d=baseDefs[key];
+  curBase=L.tileLayer(d.url,d.opt);
+  curBase.on('tileerror',function(){
+    tileErr++;
+    var tm=document.getElementById('tileMsg');
+    if(tm)tm.textContent='tile errors: '+tileErr+' (ok: '+tileOk+')';
+    /* auto-fallback after 6 bad tiles = classic OSM 403/denied */
+    if(tileErr>=6&&!autoSwitched){
+      autoSwitched=true;
+      var ix=baseOrder.indexOf(curKey);
+      var nxt=baseOrder[(ix+1)%baseOrder.length];
+      try{document.getElementById('baseSel').value=nxt;}catch(e){}
+      setBase(nxt,'auto');
+      err('OSM tile server denied access ("Access denied"/403) — auto-switched to '+baseDefs[nxt].name+' (same OSM data). If it persists, pick another base map in section 3.');
+      setTimeout(function(){autoSwitched=false;},10000);
+    }
+  });
+  curBase.on('tileload',function(){tileOk++;if(tileOk===3||tileOk%20===0){var tm=document.getElementById('tileMsg');if(tm)tm.textContent='tiles OK ('+tileOk+' loaded)';}});
+  curBase.addTo(map);
+  var bn=document.getElementById('baseName');if(bn)bn.textContent=d.name;
+  var tm2=document.getElementById('tileMsg');if(tm2)tm2.textContent='loading tiles… ('+(reason||'manual')+')';
+}
+setBase('osm','init');
+document.getElementById('baseSel').onchange=function(){setBase(this.value,'manual');};
+document.getElementById('btnBase').onclick=function(){var ix=baseOrder.indexOf(curKey);var nxt=baseOrder[(ix+1)%baseOrder.length];document.getElementById('baseSel').value=nxt;setBase(nxt,'manual');};
+setTimeout(function(){map.invalidateSize();},300);
+var laySec=L.layerGroup().addTo(map), laySite=L.layerGroup().addTo(map);
+var data=[];
+
+function colorFor(t,band){
+  t=String(t||'').toUpperCase();
+  band=String(band||'').trim().toUpperCase();
+  var baseTech='';
+  if(t.indexOf('2G')===0||t==='GSM'||t.indexOf('GSM')===0)baseTech='2G';
+  else if(t.indexOf('3G')===0||t.indexOf('UMTS')===0)baseTech='3G';
+  else if(t.indexOf('4G')===0||t.indexOf('LTE')===0)baseTech='4G';
+  else if(t.indexOf('5G')===0||t.indexOf('NR')===0)baseTech='5G';
+  else return '#a855f7';
+  // Band-wise colors per technology
+  var bandColors={
+    '2G':{'GSM900':'#16a34a','DCS1800':'#22c55e','PCS1900':'#4ade80'},
+    '3G':{'B1':'#3b82f6','B5':'#60a5fa','B8':'#93c5fd','B28':'#bfdbfe'},
+    '4G':{'B1':'#dc2626','B3':'#ef4444','B5':'#f87171','B7':'#fca5a5','B8':'#fecaca','B12':'#fca5a5','B18':'#f87171','B20':'#f97316','B28':'#fb923c','B32':'#fdba74','B38':'#ef4444','B40':'#dc2626','B41':'#b91c1c','B42':'#991b1b'},
+    '5G':{'B1':'#c2410c','B3':'#ea580c','B5':'#f97316','B7':'#fb923c','B8':'#fdba74','B12':'#fdba74','B18':'#f97316','B20':'#ef4444','B28':'#fb923c','B32':'#fbbf24','B38':'#f59e0b','B40':'#eab308','B41':'#d97706','N78':'#f97316','N77':'#fbbf24'}
+  };
+  if(bandColors[baseTech]&&bandColors[baseTech][band])return bandColors[baseTech][band];
+  // Fallback: tech base color + band hash
+  var colors={};
+  colors['2G']='#22c55e';colors['3G']='#3b82f6';colors['4G']='#ef4444';colors['5G']='#f97316';
+  var h=0;
+  for(var i=0;i<band.length;i++){h=((h*31)+band.charCodeAt(i))%360;}
+  var hues=[0,30,60,120,180,210,240,270,300,330];
+  var hue=hues[h%hues.length];
+  return 'hsl('+hue+',80%,50%)';
+}
+function normTech(t){t=String(t==null?'4G':t).trim().toUpperCase();if(!t)return '4G';if(t[0]==='2'||t.indexOf('GSM')===0)return '2G';if(t[0]==='3'||t.indexOf('UMTS')===0)return '3G';if(t[0]==='4'||t.indexOf('LTE')===0)return '4G';if(t==='2G'||t==='3G'||t==='4G')return t;return t;}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function dest(lat,lon,b,d){var R=6371000,dr=d/R,br=b*Math.PI/180,la=lat*Math.PI/180,lo=lon*Math.PI/180;var la2=Math.asin(Math.sin(la)*Math.cos(dr)+Math.cos(la)*Math.sin(dr)*Math.cos(br));var lo2=lo+Math.atan2(Math.sin(br)*Math.sin(dr)*Math.cos(la),Math.cos(dr)-Math.sin(la)*Math.sin(la2));return [la2*180/Math.PI,((lo2*180/Math.PI+540)%360)-180];}
+function sector(lat,lon,az,beam,r){var p=[[lat,lon]],n=20;for(var i=0;i<=n;i++)p.push(dest(lat,lon,az-beam/2+beam*i/n,r));p.push([lat,lon]);return p;}
+
+/* ---------- normalize rows from any source ---------- */
+function normRow(o){
+  function pick(){for(var i=0;i<arguments.length;i++){var k=arguments[i];for(var key in o){if(key.trim().toLowerCase()===k)return o[key];}}return '';}
+  var site=pick('site','sitename','site_name','name','site id','siteid');
+  var lat=pick('lat','latitude','lattitude','y');
+  var lon=pick('lon','lng','long','longitude','x','longtitude');
+  var cell=pick('cell','cellname','cell_name','sector','cell id','cellid');
+  var az=pick('azimuth','az','azim','direction','antenna azimuth','bearing');
+  var tech=pick('tech','technology','rat','network','system','generation');
+  var band=pick('band','freq','frequency','bcch','uarfcn','earfcn');
+  var rr=pick('radius','range','sector_radius','size','r','length','radius_m');
+  if(typeof lat==='string')lat=lat.replace(',','.'); if(typeof lon==='string')lon=lon.replace(',','.');
+  lat=parseFloat(lat);lon=parseFloat(lon);az=parseFloat(az);rr=parseFloat(rr);
+  if(isNaN(lat)||isNaN(lon))return null;
+  if(isNaN(az))az=0; az=((az%360)+360)%360;
+  if(isNaN(rr)||rr<50||rr>50000)rr=0; // 0 = use global slider
+  return {site:String(site||'Site').trim()||'Site',lat:lat,lon:lon,cell:String(cell||'Cell1').trim(),az:Math.round(az),tech:normTech(tech||'4G'),band:String(band||'').trim(),r:rr};
+}
+function parseCSV(text){
+  var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l&&l[0]!=='#';});
+  if(!lines.length)throw new Error('CSV empty');
+  var d=lines[0].indexOf(';')>-1?';':(lines[0].indexOf('\t')>-1?'\t':',');
+  var head=lines[0].split(d).map(function(h){return h.trim();});
+  var isHead=/site|lat|lon|lng|az|tech|cell/i.test(head.join(' '));
+  var rows=isHead?lines.slice(1):lines;
+  var out=[];
+  rows.forEach(function(ln){var p=ln.split(d);var o={};head.forEach(function(h,i){o[h]=p[i];});if(!isHead)o={Site:p[0],Lat:p[1],Lon:p[2],Cell:p[3],Azimuth:p[4],Tech:p[5],Band:p[6]};var r=normRow(o);if(r)out.push(r);});
+  if(!out.length)throw new Error('No valid lat/lon rows found.');
+  return out;
+}
+function parseJSON(text){
+  var j=JSON.parse(text);
+  var arr=Array.isArray(j)?j:(j.cells||j.sites||j.data||[]);
+  if(!Array.isArray(arr))throw new Error('JSON must be an array or {cells:[...]} (use a file saved by this tool).');
+  var out=[];arr.forEach(function(o){var r=normRow(o);if(r)out.push(r);});
+  if(!out.length)throw new Error('JSON has no valid rows.');
+  if(j.radius)document.getElementById('radius').value=j.radius;
+  if(j.beam)document.getElementById('beam').value=j.beam;
+  return out;
+}
+function parseKML(text){
+  var xml=new DOMParser().parseFromString(text,'text/xml');
+  if(xml.querySelector('parsererror'))throw new Error('Invalid KML');
+  var out=[];
+  xml.querySelectorAll('Placemark').forEach(function(pm,i){
+    function ext(n){var el=pm.querySelector('ExtendedData [name="'+n+'"]');return el?el.textContent.trim():'';}
+    var nm=pm.querySelector('name');nm=nm?nm.textContent.trim():'';
+    var pt=pm.querySelector('Point coordinates');
+    var pg=pm.querySelector('Polygon LinearRing coordinates, Polygon outerBoundaryIs LinearRing coordinates');
+    var base={Site:ext('site')||nm.split(' ')[0]||('KML'+(i+1)),Cell:ext('cell')||nm||('Cell'+(i+1)),Azimuth:ext('azimuth'),Tech:ext('tech')||'4G',Band:ext('band'),Lat:ext('lat'),Lon:ext('lon'),Radius:ext('radius')};
+    if(pt){var c=pt.textContent.trim().split(',');base.Lon=base.Lon||c[0];base.Lat=base.Lat||c[1];var r=normRow(base);if(r)out.push(r);}
+    else if(pg){var ring=pg.textContent.trim().split(/\s+/).map(function(s){var q=s.split(',');return [parseFloat(q[1]),parseFloat(q[0])];}).filter(function(q){return !isNaN(q[0]);});if(ring.length>2){var a=0,b=0,n=Math.min(ring.length,60);for(var k=0;k<n;k++){a+=ring[k][0];b+=ring[k][1];}base.Lat=base.Lat||(a/n);base.Lon=base.Lon||(b/n);var r2=normRow(base);if(r2)out.push(r2);}}
+  });
+  if(!out.length)throw new Error('No Placemarks found in KML.');
+  return out;
+}
+function parseMIFMID(mif,mid){
+  var mids=mid?mid.split(/\r?\n/):[];var recs=[],cur=null;
+  mif.split(/\r?\n/).forEach(function(raw){var l=raw.trim();
+    var m=l.match(/^Point\s+([-\d.]+)\s+([-\d.]+)/i);if(m){recs.push({k:'p',lon:parseFloat(m[1]),lat:parseFloat(m[2])});cur=null;return;}
+    if(/^Region/i.test(l)){cur={k:'r',pts:[]};recs.push(cur);return;}
+    var n=l.match(/^(-?[\d.]+)\s+(-?[\d.]+)$/);if(n&&cur&&cur.k==='r'){cur.pts.push([parseFloat(n[2]),parseFloat(n[1])]);return;}
+    if(/^(Pen|Brush|Center|Symbol)/i.test(l))cur=null;});
+  var datas=recs.filter(function(r){return r.k==='p'||r.k==='r';});var out=[];
+  datas.forEach(function(r,i){var cols=(mids[i]||'').split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(function(s){return s.trim().replace(/^"|"$/g,'');});
+    var o={Site:cols[0],Cell:cols[1],Azimuth:cols[2],Tech:cols[3],Band:cols[4],Radius:cols[5]};
+    if(r.k==='p'){o.Lat=r.lat;o.Lon=r.lon;}else{if(r.pts.length<3)return;var a=0,b=0;var nn=Math.min(r.pts.length,60);for(var k=0;k<nn;k++){a+=r.pts[k][0];b+=r.pts[k][1];}o.Lat=a/nn;o.Lon=b/nn;}
+    var nr=normRow(o);if(nr)out.push(nr);});
+  if(!out.length)throw new Error('No Point/Region records in MIF.');
+  return out;
+}
+function parseExcel(buf){
+  if(typeof XLSX==='undefined')throw new Error('Excel library (SheetJS) failed to load — need internet once, or upload CSV/JSON instead.');
+  var wb=XLSX.read(buf,{type:'array'});
+  var ws=wb.Sheets[wb.SheetNames[0]];
+  var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+  if(!rows.length)throw new Error('Excel sheet is empty.');
+  var out=[];rows.forEach(function(o){var r=normRow(o);if(r)out.push(r);});
+  if(!out.length)throw new Error('No valid rows. Need columns: Site, Lat, Lon, Cell, Azimuth, Tech, Band.');
+  return out;
+}
+
+/* ---------- render ---------- */
+function getR(){var v=parseInt(document.getElementById('radius').value,10);if(isNaN(v))v=1500;return Math.min(20000,Math.max(100,v));}
+function getB(){var v=parseInt(document.getElementById('beam').value,10);if(isNaN(v))v=65;return v;}
+function effRadius(d,R,force){if(!force&&d.r>0)return d.r;return R;}
+function render(fit){
+  clrErr();laySec.clearLayers();laySite.clearLayers();
+  var s2=document.getElementById('f2g').checked,s3=document.getElementById('f3g').checked,s4=document.getElementById('f4g').checked,s5=document.getElementById('f5g').checked;
+  var R=getR(),B=getB();
+  var force=document.getElementById('forceGlobal').checked;
+  document.getElementById('rVal').textContent=R;
+  if(document.getElementById('radiusNum').value!=String(R))document.getElementById('radiusNum').value=R;
+  document.getElementById('bVal').textContent=B;
+  var bySite={},vis=0;
+  data.forEach(function(d){
+    var show=(d.tech==='2G'&&s2)||(d.tech==='3G'&&s3)||(d.tech==='4G'&&s4)||(d.tech==='5G'&&s5)||((d.tech!=='2G'&&d.tech!=='3G'&&d.tech!=='4G'&&d.tech!=='5G')&&s5);
+    if(!show)return;vis++;
+    var c=colorFor(d.tech,d.band);
+    var rr=effRadius(d,R,force);
+    L.polygon(sector(d.lat,d.lon,d.az,B,rr),{color:c,weight:1.5,fillColor:c,fillOpacity:.35}).addTo(laySec)
+      .bindPopup('<b>'+esc(d.site)+'</b><br>'+esc(d.cell)+' · '+esc(d.tech)+' '+esc(d.band)+'<br>Az '+d.az+'° · R '+rr+'m<br>'+d.lat.toFixed(5)+', '+d.lon.toFixed(5));
+    if(!bySite[d.site])bySite[d.site]={lat:d.lat,lon:d.lon,n:0};
+    bySite[d.site].n++;
+  });
+  var dots=document.getElementById('showDots').checked,lbl=document.getElementById('showLabels').checked;
+  Object.keys(bySite).forEach(function(s){var g=bySite[s];
+    if(dots)L.circleMarker([g.lat,g.lon],{radius:5,color:'#000',weight:2,fillColor:'#fff',fillOpacity:1}).addTo(laySite).bindTooltip(s+' ('+g.n+')');
+    if(lbl)L.marker([g.lat,g.lon],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,.72);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px;white-space:nowrap">'+esc(s)+'</div>'}),interactive:false}).addTo(laySite);});
+  document.getElementById('stats').textContent='Cells: '+vis+' / '+data.length+' · Sites: '+Object.keys(bySite).length+' · R='+R+'m B='+B+'°'+(force?' (global)':' (per-cell where set)')+(s5&&!s4?' · 5G active':'');
+  document.getElementById('cnt').textContent=data.length;
+  var tb=document.getElementById('tbl');tb.innerHTML='';
+  var dl=document.getElementById('siteList');dl.innerHTML='';
+  var seen={};
+  data.slice(0,3000).forEach(function(d,i){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td></td><td></td><td></td><td></td><td></td>';
+    tr.children[0].textContent=d.site;tr.children[1].textContent=d.cell;tr.children[2].textContent=d.tech+(d.band?' '+d.band:'');tr.children[3].textContent=d.az;
+    var x=document.createElement('span');x.textContent='✕';x.className='del';x.title='Delete';x.onclick=function(ev){ev.stopPropagation();data.splice(i,1);render(false);};
+    tr.children[4].appendChild(x);
+    tr.style.cursor='pointer';tr.onclick=function(){map.setView([d.lat,d.lon],14);};
+    tb.appendChild(tr);
+    if(!seen[d.site]){seen[d.site]=1;var o=document.createElement('option');o.value=d.site;dl.appendChild(o);}
+    var k=d.site+' '+d.cell;if(!seen[k]){seen[k]=1;var o2=document.createElement('option');o2.value=k;dl.appendChild(o2);}
+  });
+  if(fit===true||(fit!==false&&document.getElementById('autoFit').checked&&vis>0&&render._needFit)){
+    render._needFit=false;
+    try{var b=laySec.getBounds();if(b.isValid())map.fitBounds(b.pad(.15));}catch(e){}
+  }
+}
+function fitView(){try{var b=laySec.getBounds();if(b.isValid())map.fitBounds(b.pad(.15));}catch(e){err('Nothing to fit yet.');}}
+['f2g','f3g','f4g','f5g','showLabels','showDots','forceGlobal'].forEach(function(id){document.getElementById(id).oninput=function(){render(false);};});
+document.getElementById('radius').oninput=function(){document.getElementById('radiusNum').value=this.value;render(false);};
+document.getElementById('radiusNum').oninput=function(){var v=parseInt(this.value,10);if(!isNaN(v)){v=Math.min(20000,Math.max(100,v));document.getElementById('radius').value=v;render(false);}};
+document.getElementById('beam').oninput=function(){render(false);};
+document.getElementById('btnFit').onclick=function(){fitView();};
+document.getElementById('btnBigger').onclick=function(){var r=getR();r=Math.min(20000,Math.round(r*1.4));document.getElementById('radius').value=r;document.getElementById('radiusNum').value=r;render(false);};
+document.getElementById('btnSmaller').onclick=function(){var r=getR();r=Math.max(100,Math.round(r/1.4));document.getElementById('radius').value=r;document.getElementById('radiusNum').value=r;render(false);};
+
+/* ---------- upload ---------- */
+var drop=document.getElementById('drop'),fi=document.getElementById('file');
+drop.onclick=function(){fi.click();};
+['dragover','dragenter'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('over');});});
+['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over');});});
+drop.addEventListener('drop',function(ev){handleFiles(ev.dataTransfer.files);});
+fi.onchange=function(ev){handleFiles(ev.target.files);fi.value='';};
+function handleFiles(files){
+  files=Array.prototype.slice.call(files);if(!files.length)return;clrErr();
+  var mids={};files.forEach(function(f){if(/\.mid$/i.test(f.name))mids[f.name.replace(/\.mid$/i,'').toLowerCase()]=f;});
+  var chain=Promise.resolve(),added=0;
+  files.forEach(function(f){
+    chain=chain.then(function(){
+      var n=f.name.toLowerCase();
+      if(/\.xlsx?$/.test(n))return f.arrayBuffer().then(function(b){var r=parseExcel(b);data=data.concat(r);added+=r.length;});
+      else return f.text().then(function(t){
+        var r;
+        if(n.endsWith('.json'))r=parseJSON(t);
+        else if(n.endsWith('.kml'))r=parseKML(t);
+        else if(n.endsWith('.mif')){var base=n.replace(/\.mif$/,'');var mf=mids[base];if(mf)return mf.text().then(function(mt){var rr=parseMIFMID(t,mt);data=data.concat(rr);added+=rr.length;});else r=parseMIFMID(t,'');}
+        else if(n.endsWith('.mid'))return;
+        else r=parseCSV(t);
+        if(r){data=data.concat(r);added+=r.length;}
+      });
+    });
+  });
+  chain.then(function(){render._needFit=true;render(true);ok('Loaded '+added+' cells from '+files.length+' file(s). Total: '+data.length+'. Drag Radius slider to resize — map stays put.');}).catch(function(e){err('Import error: '+(e.message||e));});
+}
+document.getElementById('btnLoadCsv').onclick=function(){try{var r=parseCSV(document.getElementById('csv').value);data=data.concat(r);render._needFit=true;render(true);ok('Added '+r.length+' cells.');}catch(e){err('CSV error: '+e.message);}};
+document.getElementById('btnSample').onclick=function(){data=[{site:'Kathmandu_Dasharath_01',lat:27.7050,lon:85.3120,cell:'Cell1',az:0,tech:'4G',band:'B3',r:0},{site:'Kathmandu_Dasharath_01',lat:27.7050,lon:85.3120,cell:'Cell2',az:120,tech:'4G',band:'B3',r:0},{site:'Kathmandu_Dasharath_01',lat:27.7050,lon:85.3120,cell:'Cell3',az:240,tech:'4G',band:'B20',r:0},{site:'Pokhara_Sarangkot_02',lat:28.2050,lon:83.9850,cell:'Cell1',az:45,tech:'4G',band:'B3',r:0},{site:'Pokhara_Sarangkot_02',lat:28.2050,lon:83.9850,cell:'Cell2',az:165,tech:'4G',band:'B20',r:0},{site:'Pokhara_Sarangkot_02',lat:28.2050,lon:83.9850,cell:'Cell3',az:285,tech:'2G',band:'GSM900',r:0},{site:'Biratnagar_Airport_03',lat:26.4460,lon:87.2650,cell:'Cell1',az:90,tech:'4G',band:'B3',r:0},{site:'Biratnagar_Airport_03',lat:26.4460,lon:87.2650,cell:'Cell2',az:210,tech:'4G',band:'B7',r:0},{site:'Biratnagar_Airport_03',lat:26.4460,lon:87.2650,cell:'Cell3',az:330,tech:'4G',band:'B7',r:0},{site:'Nepalgunj_Chaurjahari_04',lat:28.0430,lon:81.6060,cell:'Cell1',az:45,tech:'4G',band:'B3',r:0},{site:'Nepalgunj_Chaurjahari_04',lat:28.0430,lon:81.6060,cell:'Cell2',az:165,tech:'4G',band:'B20',r:0},{site:'Nepalgunj_Chaurjahari_04',lat:28.0430,lon:81.6060,cell:'Cell3',az:285,tech:'2G',band:'GSM900',r:0}];render._needFit=true;render(true);};
+document.getElementById('btnClear').onclick=function(){data=[];render(false);};
+document.getElementById('btnTemplate').onclick=function(){
+  if(typeof XLSX==='undefined'){err('Excel lib not loaded (offline). Copy this header into Excel: Site | Lat | Lon | Cell | Azimuth | Tech | Band');return;}
+  var ws=XLSX.utils.json_to_sheet([{Site:'Kathmandu_Dasharath_01',Lat:27.7050,Lon:85.3120,Cell:'Cell1',Azimuth:0,Tech:'4G',Band:'B3'},{Site:'Kathmandu_Dasharath_01',Lat:27.7050,Lon:85.3120,Cell:'Cell2',Azimuth:120,Tech:'4G',Band:'B3'}]);
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sites');XLSX.writeFile(wb,'CellMap_Template.xlsx');
+};
+document.getElementById('btnAdd').onclick=function(){
+  var s=document.getElementById('mSite').value.trim()||'Site_'+(data.length+1);
+  var lat=parseFloat(document.getElementById('mLat').value),lon=parseFloat(document.getElementById('mLon').value);
+  if(isNaN(lat)||isNaN(lon)){err('Enter valid Lat and Lon to add a site.');return;}
+  data.push({site:s,lat:lat,lon:lon,cell:document.getElementById('mCell').value.trim()||'Cell1',az:parseInt(document.getElementById('mAz').value,10)||0,tech:normTech(document.getElementById('mTech').value),band:document.getElementById('mBand').value.trim(),r:0});
+  render(false);ok('Added '+s+'.');
+};
+
+/* ---------- search ---------- */
+document.getElementById('btnSite').onclick=function(){
+  var q=document.getElementById('qSite').value.trim().toLowerCase();if(!q)return;
+  var hit=data.filter(function(d){return (d.site+' '+d.cell).toLowerCase().indexOf(q)>-1;});
+  if(!hit.length){err('Site/cell not found: '+q);return;}clrErr();
+  map.setView([hit[0].lat,hit[0].lon],14);
+  L.popup().setLatLng([hit[0].lat,hit[0].lon]).setContent('<b>'+esc(hit[0].site)+'</b><br>'+hit.length+' matching cell(s)').openOn(map);
+};
+document.getElementById('btnPlace').onclick=function(){
+  var q=document.getElementById('qPlace').value.trim();if(!q)return;
+  document.getElementById('placeRes').textContent='Searching…';
+  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(j){
+    if(!j.length){document.getElementById('placeRes').textContent='Place not found.';return;}
+    map.setView([parseFloat(j[0].lat),parseFloat(j[0].lon)],13);document.getElementById('placeRes').textContent=j[0].display_name;
+  }).catch(function(){document.getElementById('placeRes').textContent='Place search failed (offline?).';});
+};
+
+/* ---------- downloads ---------- */
+function dl(name,content,type){var b=new Blob([content],{type:type||'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},600);}
+document.getElementById('btnCsvOut').onclick=function(){if(!data.length){err('Nothing to export.');return;}dl('cellmap.csv','Site,Lat,Lon,Cell,Azimuth,Tech,Band,Radius\n'+data.map(function(d){return [d.site,d.lat,d.lon,d.cell,d.az,d.tech,d.band,d.r||''].join(',');}).join('\n'),'text/csv');};
+document.getElementById('btnJson').onclick=function(){if(!data.length){err('Nothing to save.');return;}var R=getR(),B=getB();dl('cellmap_project.json',JSON.stringify({app:'RF-CellMap',version:1,saved:new Date().toISOString(),radius:R,beam:B,cells:data},null,2),'application/json');ok('Project JSON saved — re-upload it anytime to restore.');};
+document.getElementById('btnXlsx').onclick=function(){if(!data.length){err('Nothing to export.');return;}if(typeof XLSX==='undefined'){err('Excel lib offline. Use CSV export instead.');return;}var ws=XLSX.utils.json_to_sheet(data.map(function(d){return {Site:d.site,Lat:d.lat,Lon:d.lon,Cell:d.cell,Azimuth:d.az,Tech:d.tech,Band:d.band,Radius:d.r||''};}));var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sites');XLSX.writeFile(wb,'cellmap.xlsx');};
+function fmt6(n){return Number(n).toFixed(6);}
+function fmt1(n){return Number(n).toFixed(1);}
+function buildKml(){
+  var R=getR(),B=getB();var force=document.getElementById('forceGlobal').checked;
+  var out=['<?xml version="1.0" encoding="UTF-8"?>','<kml xmlns="http://www.opengis.net/kml/2.2">','<Document><name>RF CellMap</name><description>'+esc(data.length)+' cells exported '+new Date().toISOString().slice(0,10)+'</description>'];
+  // Band-based styles
+  var bandStyleCache={};
+  function bandStyleCode(tech,band){
+    var b=String(band||'').trim().toUpperCase();
+    var tc=String(tech||'').toUpperCase();
+    var map={'2G':{'GSM900':'5ec522','DCS1800':'22c55e','PCS1900':'4ade80'},'3G':{'B1':'f6823b','B5':'d97706','B8':'f59e0b','B28':'eab308'},'4G':{'B1':'dc2626','B3':'ef4444','B5':'f87171','B7':'fca5a5','B8':'fecaca','B12':'fca5a5','B18':'f87171','B20':'f97316','B28':'fb923c','B32':'fdba74','B38':'ef4444','B40':'dc2626','B41':'b91c1c','B42':'991b1b'},'5G':{'B1':'c2410c','B3':'ea580c','B5':'f97316','B7':'fb923c','B8':'fdba74','B12':'fdba74','B18':'f97316','B20':'ef4444','B28':'fb923c','B32':'fbbf24','B38':'f59e0b','B40':'eab308','B41':'d97706','N78':'f97316','N77':'fbbf24'}};
+    var base=map[tc]||{};
+    if(base&&base[b])return base[b];
+    // Hash fallback
+    var h=0;
+    for(var i=0;i<b.length;i++){h=((h*31)+b.charCodeAt(i))%360;}
+    var hues=['5ec522','22c55e','4ade80','f6823b','9a6700','ef4444','f87171','f97316','fb923c','fdba74','fbf24','eab308','d97706'];
+    return String(hues[h%hues.length]);
+  }
+  out.push('<Style id="sitePt"><IconStyle><scale>1.0</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon></IconStyle></Style>');
+  function ed(d,rr){return '<ExtendedData><Data name="site"><value>'+esc(d.site)+'</value></Data><Data name="cell"><value>'+esc(d.cell)+'</value></Data><Data name="azimuth"><value>'+d.az+'</value></Data><Data name="tech"><value>'+esc(d.tech)+'</value></Data><Data name="band"><value>'+esc(d.band)+'</value></Data><Data name="lat"><value>'+fmt6(d.lat)+'</value></Data><Data name="lon"><value>'+fmt6(d.lon)+'</value></Data><Data name="radius"><value>'+fmt1(rr)+'</value></Data></ExtendedData>';}
+  out.push('<Folder><name>Sectors</name>');
+  data.forEach(function(d){
+    var b=d.tech.toUpperCase()+(bandStyleCode(d.tech,d.band)?'_'+bandStyleCode(d.tech,d.band):'');
+    var st='s'+b;
+    // Create style if not cached
+    if(!bandStyleCache[b]){
+      var sc=bandStyleCode(d.tech,d.band);
+      bandStyleCache[b]=true;
+      out.push('<Style id="'+st+'"><LineStyle><color>ff'+sc+'</color><width>2</width></LineStyle><PolyStyle><color>66'+sc+'</color><fill>1</fill><outline>1</outline></PolyStyle></Style>');
+    }
+    var rr=effRadius(d,R,force);
+    var ring=sector(d.lat,d.lon,d.az,B,rr);
+    if(ring.length<4)throw new Error('Bad sector ring for '+d.site+' '+d.cell);
+    ring.forEach(function(p){if(!isFinite(p[0])||!isFinite(p[1]))throw new Error('Bad coordinate for '+d.site+' '+d.cell);});
+    var pts=ring.map(function(p){return fmt6(p[1])+','+fmt6(p[0])+',0';}).join(' ');
+    out.push('<Placemark><name>'+esc(d.site+' '+d.cell)+'</name><description>'+esc(d.tech+' '+d.band+' Az '+d.az)+'</description><styleUrl>#'+st+'</styleUrl>'+ed(d,rr)+'<Polygon><tessellate>1</tessellate><altitudeMode>clampToGround</altitudeMode><outerBoundaryIs><LinearRing><coordinates>'+pts+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>');
+  });
+  out.push('</Folder><Folder><name>Sites</name>');
+  var seen={};
+  data.forEach(function(d){
+    var key=d.site+'|'+fmt6(d.lat)+'|'+fmt6(d.lon);
+    if(seen[key])return;seen[key]=1;
+    out.push('<Placemark><name>'+esc(d.site)+'</name><styleUrl>#sitePt</styleUrl>'+ed(d,effRadius(d,R,force))+'<Point><coordinates>'+fmt6(d.lon)+','+fmt6(d.lat)+',0</coordinates></Point></Placemark>');
+  });
+  out.push('</Folder></Document></kml>');
+  return out.join('\n');
+}
+document.getElementById('btnKml').onclick=function(){
+  if(!data.length){err('Nothing to export.');return;}
+  try{
+    var k=buildKml();
+    dl('cellmap.kml',k,'application/vnd.google-earth.kml+xml');
+    ok('KML exported ('+data.length+' cells, '+(k.length/1024).toFixed(1)+' KB). Double-click to open in Google Earth.');
+  }catch(e){err('KML export failed: '+(e.message||e));}
+};
+var CRLF='\r\n';
+function mifQ(s){return '"'+String(s==null?'':s).replace(/"/g,'""').replace(/[\r\n]+/g,' ')+'"';}
+function buildMifMid(){
+  var R=getR(),B=getB();var force=document.getElementById('forceGlobal').checked;
+  var L=['Version 450','Charset "UTF-8"','Delimiter ","','CoordSys Earth Projection 1, 104','Columns 6','  Site Char(50)','  Cell Char(50)','  Azimuth Decimal(8,2)','  Tech Char(10)','  Band Char(20)','  Radius Decimal(12,1)','Data'];
+  var midL=[];
+  data.forEach(function(d){
+    if(!isFinite(d.lat)||!isFinite(d.lon))throw new Error('Bad coordinate for '+d.site+' '+d.cell);
+    var rr=effRadius(d,R,force);
+    midL.push([mifQ(d.site),mifQ(d.cell),d.az,mifQ(d.tech),mifQ(d.band),fmt1(rr)].join(','));
+    var pts=sector(d.lat,d.lon,d.az,B,rr);
+    if(pts.length>1){var f=pts[0],l=pts[pts.length-1];if(Math.abs(f[0]-l[0])<1e-9&&Math.abs(f[1]-l[1])<1e-9)pts=pts.slice(0,-1);}
+    if(pts.length<3)throw new Error('Bad region for '+d.site+' '+d.cell);
+    L.push('Region  1','  '+pts.length);
+    pts.forEach(function(p){if(!isFinite(p[0])||!isFinite(p[1]))throw new Error('Bad coordinate for '+d.site+' '+d.cell);L.push(fmt6(p[1])+' '+fmt6(p[0]));});
+    var cy=0,cx=0,i;for(i=0;i<pts.length;i++){cy+=pts[i][0];cx+=pts[i][1];}cy/=pts.length;cx/=pts.length;
+    L.push('  Pen (1,2,0)','  Brush (2,0,16777215)','  Center '+fmt6(cx)+' '+fmt6(cy));
+  });
+  if(midL.length!==data.length)throw new Error('MIF/MID row mismatch');
+  return {mif:L.join(CRLF)+CRLF,mid:midL.join(CRLF)+(midL.length?CRLF:'')};
+}
+document.getElementById('btnMif').onclick=function(){
+  if(!data.length){err('Nothing to export.');return;}
+  try{
+    var b=buildMifMid();
+    dl('cellmap.mif',b.mif,'text/plain;charset=utf-8');
+    setTimeout(function(){dl('cellmap.mid',b.mid,'text/plain;charset=utf-8');},800);
+    ok('MapInfo exported: '+data.length+' regions. Keep cellmap.mif + cellmap.mid SAME name, SAME folder, then open the .MIF.');
+  }catch(e){err('MapInfo export failed: '+(e.message||e));}
+};
+document.getElementById('btnMid').onclick=function(){
+  if(!data.length){err('Nothing to export.');return;}
+  try{dl('cellmap.mid',buildMifMid().mid,'text/plain;charset=utf-8');ok('MID downloaded. Put it next to cellmap.mif (same name, same folder).');}
+  catch(e){err('MID export failed: '+(e.message||e));}
+};
+window.addEventListener('error',function(ev){if(ev.message)err('Runtime error: '+ev.message);});
+render._needFit=false;
+render(false);
+})();
+// Prevent copying, printing, and code extraction
+document.addEventListener('copy', function(e) { e.preventDefault(); });
+document.addEventListener('cut', function(e) { e.preventDefault(); });
+document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+function disablePrint() { window.onbeforeprint = window.onafterprint = function() { event.preventDefault(); }; }
+disablePrint();
+// Remove contextmenu to prevent code extraction
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+</script>
+</body>
+</html>
