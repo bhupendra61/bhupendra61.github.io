@@ -373,6 +373,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.7 6.3 3-3a4.2 4.2 0 0 1-5.3 5.3l-6.1 6.1a2.1 2.1 0 1 0 3 3l6.1-6.1a4.2 4.2 0 0 1 5.3-5.3l-3 3z"/><path d="m5 5 4 4"/></svg>
         Tool-Xls-TABKML
       </button>
+      <button class="tab" data-tab="mwlink" onclick="switchTab('mwlink')" role="tab" aria-selected="false">
+        <span class="dot"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h18M5 8h14M5 16h14"/><circle cx="12" cy="12" r="2.5"/></svg>
+        MW-Link Tool
+      </button>
     </nav>
 
     <!-- Embedded Weather -->
@@ -409,10 +414,15 @@
       <iframe id="frame-tool" title="Tool-Xls-TABKML"></iframe>
     </div>
 
+    <div class="panel" id="panel-mwlink">
+      <div class="loading" id="load-mwlink"><div class="spinner"></div>Loading microwave link tool…</div>
+      <iframe id="frame-mwlink" title="MW-Link Tool"></iframe>
+    </div>
+
   </div>
 </div>
 
-<footer>Bhupendra Jha · Kathmandu, Nepal — Profile · 5G NR Monte Carlo Simulator · NG-RAN Call Flow · Tool-Xls-TABKML</footer>
+<footer>Bhupendra Jha · Kathmandu, Nepal — Profile · 5G NR Monte Carlo Simulator · NG-RAN Call Flow · Tool-Xls-TABKML · MW-Link Tool</footer>
 
 
 <script>
@@ -494,7 +504,8 @@
     profile: 'profile.html',
     montecarlo: 'montecarlo.html',
     ngran: 'ngran.html',
-    tool: 'XLStoKMLTAB.html'
+    tool: 'XLStoKMLTAB.html',
+    mwlink: 'microwave_link_mapper_standalone.html'
   };
   const loaded = {};
 
