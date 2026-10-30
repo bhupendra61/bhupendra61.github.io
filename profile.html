@@ -297,6 +297,77 @@
   .form-submit:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(10,91,92,0.3);}
   .form-submit:active{transform:translateY(0);}
 
+  /* Compact portfolio layout */
+  .wrap{max-width:1000px;padding:0 24px;}
+  nav .wrap{height:56px;}
+  .navlinks{gap:20px;font-size:0.82rem;}
+  .nav-cta{padding:8px 15px;font-size:0.8rem;}
+  .clock{padding:6px 11px;font-size:0.72rem;}
+  header.hero{padding:48px 0 42px;}
+  .hero-grid{grid-template-columns:minmax(0,1.55fr) minmax(180px,.45fr);gap:34px;}
+  .eyebrow{margin-bottom:14px;padding:5px 10px;font-size:0.68rem;}
+  h1.name{font-size:2.35rem;}
+  .role{font-size:1.04rem;margin-top:7px;}
+  .band{margin-top:13px;gap:5px;}
+  .band span{padding:4px 7px;font-size:0.67rem;}
+  .lede{margin-top:17px;font-size:0.9rem;line-height:1.5;}
+  .contact-row{margin-top:19px;gap:10px;font-size:0.78rem;}
+  .contact-row svg{width:13px;height:13px;}
+  .hero-actions{margin-top:22px;gap:9px;}
+  .btn-primary,.btn-ghost{padding:9px 16px;font-size:0.82rem;}
+  .portrait-hex{width:180px;height:208px;}
+  .portrait-ring{inset:-9px;}
+  .portrait-cap{margin-top:11px;font-size:0.67rem;}
+  section{padding:38px 0;}
+  .section-head{margin-bottom:22px;}
+  .kicker{font-size:0.67rem;margin-bottom:5px;}
+  h2.section-title{font-size:1.48rem;}
+  .rule{margin:0 0 38px;}
+  .summary-block{padding:22px 26px;font-size:0.9rem;line-height:1.55;}
+  .top-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px;padding:38px 0;}
+  .top-grid section{padding:0;}
+  .top-grid .section-head{margin-bottom:18px;}
+  .top-grid .comp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .comp-grid{grid-template-columns:repeat(3,1fr);gap:10px;}
+  .comp-cell{padding:11px 12px;font-size:0.79rem;gap:8px;}
+  .comp-cell .hexmark{width:22px;height:22px;}
+  .timeline{padding-left:25px;}
+  .tl-item{margin-bottom:25px;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:8px;}
+  .tl-dot{left:-26px;width:11px;height:11px;}
+  .tl-role{font-size:0.98rem;}
+  .tl-period{font-size:0.68rem;padding:3px 8px;}
+  .tl-org{font-size:0.8rem;}
+  .tl-focus{font-size:0.76rem;margin-top:7px;}
+  .tl-list{margin-top:8px;padding-left:17px;font-size:0.8rem;line-height:1.45;}
+  .tl-list li{margin-bottom:4px;}
+  .two-col{gap:28px;}
+  .edu-item{padding-left:13px;margin-bottom:18px;}
+  .edu-degree{font-size:0.87rem;}
+  .edu-school{font-size:0.8rem;}
+  .edu-period{font-size:0.68rem;}
+  .cert-list li{padding:8px 0;font-size:0.8rem;gap:9px;}
+  .cert-list svg{width:16px;height:16px;}
+  .pub-box{margin-top:22px;padding:15px 17px;font-size:0.8rem;}
+  .lang-grid{gap:9px;}
+  .lang-cell{padding:12px 8px;}
+  .lang-name{font-size:0.82rem;}
+  .cta-band{padding:20px 24px;border-radius:9px;gap:16px;}
+  .cta-band h2{font-size:1.18rem;}
+  .cta-band p{margin-top:5px;font-size:0.78rem;line-height:1.45;}
+  .cta-links{gap:8px;}
+  .cta-links a{padding:8px 13px;font-size:0.76rem;}
+  #contact{padding-top:30px;padding-bottom:30px;}
+  #contact .section-head{margin-bottom:16px;}
+  .contact-form-box{max-width:760px;padding:20px 22px;}
+  .contact-form-box form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;}
+  .form-group{margin-bottom:0;}
+  .form-group:nth-child(5),.form-submit{grid-column:1 / -1;}
+  .form-label,.form-input,.form-textarea{font-size:0.84rem;}
+  .form-label{margin-bottom:5px;}
+  .form-input,.form-textarea{padding:8px 10px;}
+  .form-textarea{min-height:76px;}
+  .form-submit{padding:9px 18px;font-size:0.84rem;}
+
   [data-reveal]{opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease;}
   [data-reveal].in{opacity:1; transform:translateY(0);}
 
@@ -310,7 +381,12 @@
     .lang-grid{grid-template-columns:repeat(2,1fr);}
     .navlinks{display:none;}
     h1.name{font-size:2.2rem;}
-    .cta-band{flex-direction:column; text-align:center; padding:40px 26px;}
+    .cta-band{flex-direction:column; text-align:center; padding:22px 20px;}
+    .top-grid{grid-template-columns:1fr;gap:0;padding:0;}
+    .top-grid section{padding:38px 0;}
+    .top-grid .comp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .contact-form-box form{grid-template-columns:1fr;}
+    .form-group:nth-child(5),.form-submit{grid-column:auto;}
   }
 </style>
 </head>
@@ -371,6 +447,7 @@
 
 <div class="wrap">
 
+<div class="top-grid">
 <section id="summary" data-reveal>
   <div class="section-head">
     <span class="kicker">Profile</span>
@@ -380,8 +457,6 @@
     Telecom RF Planning and Optimization Engineer with 18+ years of experience across the Wireless network lifecycle — from 2G/GSM through 3G/WCDMA, 4G/LTE, and into 5G, Wi‑Fi, and IoT deployments. Proven track record in network planning, drive testing, RF optimization, site survey and BTS/BSC parameter tuning, transmission cut‑over monitoring, and vendor coordination with ZTE and Huawei. Holds a B.E. in Electrical and Electronics Engineering, an M.Sc. Eng. in Information System Engineering, and an MBA — combining deep technical expertise with project and people management capability. Experienced trainer and lecturer, skilled at transferring technical knowledge to engineering teams. Seeking to bring a rare blend of hands‑on RF engineering depth and strategic planning experience to a forward‑looking telecom organization.
   </div>
 </section>
-
-<hr class="rule">
 
 <section id="skills" data-reveal>
   <div class="section-head">
@@ -405,6 +480,7 @@
     <div class="comp-cell"><span class="hexmark"></span>Core Transmission (Optical &amp; Microwave) Design</div>
   </div>
 </section>
+</div>
 
 <hr class="rule">
 
@@ -508,7 +584,7 @@
         <div class="edu-school">Chittagong University of Engineering &amp; Technology</div>
         <div class="edu-period">2001 — 2006</div>
       </div>
-
+    </div>
     <div>
       <ul class="cert-list">
         <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/></svg>5G Communication Systems and Internet of Things</li>
@@ -519,22 +595,13 @@
       </ul>
     </div>
   </div>
-</div>
 
-  
-
-<div class="pub-box">
+  <div class="pub-box">
         <div class="kicker2">Publication</div>
 
         <div class="pub-title">"Spare Part Management System for Nepal Telecom GSM System Performance"</div>
     <div class="pub-title">"Coverage and Deployment Analysis of Narrowband Internet of Things (NB-IOT) For Smart Meter                     Through Network Planning and Simulation"</div>    
-         </div>
-    </div>
-</div>
-
-  
-
-  
+  </div>
 </section>
 
 <hr class="rule">

@@ -17,6 +17,17 @@
     --mono: "SFMono-Regular", Consolas, "Roboto Mono", Menlo, monospace;
     --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   }
+  [data-theme="light"]{
+    --bg:#eef2f5;
+    --panel:#ffffff;
+    --panel2:#f6f8fa;
+    --border:#cbd5df;
+    --text:#17212b;
+    --muted:#526272;
+    --accent:#1769aa;
+    --accent2:#087f6b;
+    --warn:#a85d00;
+  }
   *{box-sizing:border-box;}
   body{
     margin:0; padding:24px;
@@ -24,6 +35,8 @@
     color:var(--text);
     font-family:var(--sans);
   }
+  .page-toolbar{display:flex;justify-content:flex-end;margin-bottom:8px;}
+  .theme-toggle{margin:0;border-color:var(--border);font-size:12px;padding:7px 12px;}
   h1{
     font-size:22px; letter-spacing:.3px; margin:0 0 4px 0;
   }
@@ -116,6 +129,9 @@
 </head>
 <body>
 
+<div class="page-toolbar">
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch color theme"></button>
+</div>
 <h1><b>Monte-Carlo Simulation for 5G</b></h1>
 <div class="subtitle">5G NR Monte Carlo Link / System-Level Simulator</div>
 
@@ -592,6 +608,18 @@
 <footer>Prepared by Bhupendra Jha, NTC</footer>
 
 <script>
+const themeToggle = document.getElementById("themeToggle");
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  themeToggle.textContent = theme === "light" ? "☾ Dark mode" : "☀ Light mode";
+  themeToggle.setAttribute("aria-label", theme === "light" ? "Switch to dark theme" : "Switch to light theme");
+  localStorage.setItem("ran-page-theme", theme);
+}
+applyTheme(localStorage.getItem("ran-page-theme") || "dark");
+themeToggle.addEventListener("click", () => {
+  applyTheme(document.body.dataset.theme === "light" ? "dark" : "light");
+});
+
 /* ============================================================
    RNG ENGINES
    ============================================================ */
@@ -1078,4 +1106,3 @@ document.addEventListener("keydown", function(e) {
 
 </body>
 </html>
-

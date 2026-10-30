@@ -31,6 +31,20 @@
     --c-green: #3FA266;
     --c-blue: #7BAFE9;
   }
+  [data-theme="light"] {
+    --bg-editor: #f3f6f8;
+    --bg-chrome: #ffffff;
+    --text-primary: #17212b;
+    --text-secondary: #526272;
+    --text-tertiary: #71808e;
+    --fill-secondary: rgba(23, 33, 43, 0.10);
+    --fill-tertiary: rgba(23, 33, 43, 0.06);
+    --fill-quaternary: rgba(23, 33, 43, 0.035);
+    --stroke-primary: rgba(23, 33, 43, 0.22);
+    --stroke-secondary: rgba(23, 33, 43, 0.14);
+    --stroke-tertiary: rgba(23, 33, 43, 0.09);
+    --accent: #1769aa;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
@@ -127,6 +141,7 @@
   .log .s { color: var(--text-tertiary); flex: 0 0 auto; width: 26px; }
   .log .if { flex: 0 0 auto; font-weight: 700; width: 58px; }
   .log .m { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; }
+  .theme-toggle { margin-left: auto; }
 </style>
 </head>
 <body>
@@ -141,6 +156,7 @@
     <button class="btn flowbtn active" data-flow="mo">UE-Initiated (MO)</button>
     <button class="btn flowbtn" data-flow="mt">UE-Terminated (MT)</button>
     <span class="pill">Now showing: <span id="flowName">UE-Initiated (Mobile Originated)</span></span>
+    <button class="btn theme-toggle" id="themeToggle" type="button" aria-label="Switch color theme"></button>
   </div>
 
   <div class="controls">
@@ -221,6 +237,18 @@
 </div>
 
 <script>
+const themeToggle = document.getElementById("themeToggle");
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  themeToggle.textContent = theme === "light" ? "☾ Dark mode" : "☀ Light mode";
+  themeToggle.setAttribute("aria-label", theme === "light" ? "Switch to dark theme" : "Switch to light theme");
+  localStorage.setItem("ran-page-theme", theme);
+}
+applyTheme(localStorage.getItem("ran-page-theme") || "dark");
+themeToggle.addEventListener("click", () => {
+  applyTheme(document.body.dataset.theme === "light" ? "dark" : "light");
+});
+
 const SVGNS = "http://www.w3.org/2000/svg";
 
 const A = {
@@ -763,7 +791,6 @@ document.addEventListener("keydown", function(e) {
 
 </body>
 </html>
-
 
 
 
